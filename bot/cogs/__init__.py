@@ -1,0 +1,1 @@
+"""Dockerize slash-command cogs."""
