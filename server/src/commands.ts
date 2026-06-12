@@ -1,6 +1,6 @@
 import { CommandContext } from './types';
 import { handleSetup } from './services/setupService';
-import { adminCheck, adminDelete, adminForceVisibility, adminInfo, adminList, adminSuspend, adminUnsuspend, containerDown, containerStatus, containerUp, createUserContainer, deleteOwnContainer, inviteUser, makePrivate, makePublic, showInvites, uninviteUser } from './services/containerService';
+import { acceptContainerInvite, adminCheck, adminDelete, adminForceVisibility, adminInfo, adminList, adminSuspend, adminUnsuspend, containerDown, containerStatus, containerUp, createUserContainer, deleteOwnContainer, inviteUser, makePrivate, makePublic, showInvites, uninviteUser } from './services/containerService';
 import { createContainerChannel, deleteContainerChannel, listContainerChannels } from './services/channelService';
 import { ICON, safeSend, terminal } from './messages';
 
@@ -24,6 +24,7 @@ export async function dispatch(ctx: CommandContext): Promise<void> {
       case 'public': return makePublic(ctx);
       case 'private': return makePrivate(ctx);
       case 'invite': return inviteUser(ctx);
+      case 'accept': return acceptContainerInvite(ctx);
       case 'uninvite': return uninviteUser(ctx);
       case 'invites': return showInvites(ctx);
       default: return help(ctx);
@@ -55,5 +56,20 @@ export async function dispatch(ctx: CommandContext): Promise<void> {
 
 async function help(ctx: CommandContext): Promise<void> {
   const p = ctx.config.commandPrefix;
-  await safeSend(ctx.channelId, terminal(`${ICON.docker} Dockerize Root Bot`, `${p} setup channel=<channelId> staff=<roleId>\n${p} container create <name>\n${p} container up | down | status | public | private\n${p} container invite <userId> | uninvite <userId> | invites\n${p} container delete confirm\n${p} channel create [text|voice] <name>\n${p} channel delete <channelId> confirm\n${p} channel list\n${p} admin container check <userId> <reason>\n${p} admin container suspend <userId> <reason>\n${p} admin container unsuspend <userId>\n${p} admin container delete <userId> <reason>\n${p} admin container list | info <userId>\n${p} admin container force-private <userId> | force-public <userId>`, 'Root version uses text commands because Root Bots interact through channel messages.'));
+  await safeSend(ctx.channelId, terminal(`${ICON.docker} Dockerize Root Bot`, `${p} setup channel=<channelId> staff=<roleId>
+${p} container create <name>
+${p} container up | down | status | public | private
+${p} container invite <userId>
+${p} container accept <ownerId>
+${p} container uninvite <userId> | invites
+${p} container delete confirm
+${p} channel create [text|voice] <name>
+${p} channel delete <channelId> confirm
+${p} channel list
+${p} admin container check <userId> <reason>
+${p} admin container suspend <userId> <reason>
+${p} admin container unsuspend <userId>
+${p} admin container delete <userId> <reason>
+${p} admin container list | info <userId>
+${p} admin container force-private <userId> | force-public <userId>`, 'Root role mode: each container gets a `Container: name` role. Invited users run accept to receive the role.'));
 }

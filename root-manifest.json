@@ -1,61 +1,29 @@
 {
-  "id": "replace-with-your-root-developer-portal-app-id",
-  "name": "Dockerize Root Bot",
-  "description": "Turns a Root community into a container-like environment using private channel groups, channels, terminal-style command messages, and SQLite state.",
+  "id": "AC9aVdlSiwm4MtkQRGLJCg",
   "version": "1.0.0",
-  "launch": {
-    "server": "server/dist/main.js"
-  },
-  "settings": [
-    {
-      "key": "commandPrefix",
-      "type": "text",
-      "name": "Command prefix",
-      "description": "Text prefix used to run Dockerize commands in channels.",
-      "defaultValue": "dkz"
-    },
-    {
-      "key": "maxChannelsPerContainer",
-      "type": "number",
-      "name": "Maximum channels per container",
-      "description": "Maximum number of channels a user container may contain.",
-      "defaultValue": 10
-    },
-    {
-      "key": "defaultContainerVisibility",
-      "type": "select",
-      "name": "Default container visibility",
-      "description": "Whether new containers start private or public.",
-      "defaultValue": "private",
-      "options": ["private", "public"]
-    },
-    {
-      "key": "staffRoleId",
-      "type": "roleOrMember",
-      "name": "Staff role",
-      "description": "Role that can inspect, suspend, and delete containers. Can also be set with dkz setup."
-    },
-    {
-      "key": "commandChannelId",
-      "type": "channel",
-      "name": "Command channel",
-      "description": "Channel where normal Dockerize commands should be run. Can also be set with dkz setup."
+  "package": {
+    "server": {
+      "launch": "dist/main.js",
+      "deploy": ["dist"],
+      "nodeModules": ["node_modules"]
     }
-  ],
-  "permissions": [
-    "ViewChannel",
-    "CreateMessage",
-    "ReadMessageHistory",
-    "CreateChannel",
-    "EditChannel",
-    "DeleteChannel",
-    "CreateChannelGroup",
-    "EditChannelGroup",
-    "DeleteChannelGroup",
-    "CreateAccessRule",
-    "EditAccessRule",
-    "DeleteAccessRule",
-    "ListCommunityMembers",
-    "ListCommunityRoles"
-  ]
+  },
+  "permissions": {
+    "community": {
+      "manageRoles": true,
+      "createChannelGroup": true
+    },
+    "channel": {
+      "fullControl": true,
+      "createMessage": true,
+      "viewMessageHistory": true,
+      "createMessageReaction": true,
+      "voiceMuteOther": true,
+      "voiceDeafenOther": true,
+      "voiceKick": true,
+      "createFile": true,
+      "manageFiles": true,
+      "viewFile": true
+    }
+  }
 }

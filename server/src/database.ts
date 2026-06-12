@@ -12,6 +12,10 @@ function run(sql: string, params: unknown[] = []): Promise<void> {
   });
 }
 
+async function runIgnore(sql: string): Promise<void> {
+  try { await run(sql); } catch { /* migration already applied */ }
+}
+
 function get<T>(sql: string, params: unknown[] = []): Promise<T | undefined> {
   return new Promise((resolve, reject) => {
     db.get(sql, params, (err, row) => err ? reject(err) : resolve(row as T | undefined));
@@ -41,6 +45,7 @@ export async function initDatabase(): Promise<void> {
     owner_id TEXT NOT NULL UNIQUE,
     owner_name TEXT NOT NULL,
     container_name TEXT NOT NULL,
+    container_role_id TEXT,
     channel_group_id TEXT,
     terminal_channel_id TEXT,
     logs_channel_id TEXT,
@@ -53,6 +58,7 @@ export async function initDatabase(): Promise<void> {
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   )`);
+  await runIgnore('ALTER TABLE containers ADD COLUMN container_role_id TEXT');
   await run(`CREATE TABLE IF NOT EXISTS container_channels (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     owner_id TEXT NOT NULL,
@@ -66,9 +72,11 @@ export async function initDatabase(): Promise<void> {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     owner_id TEXT NOT NULL,
     invited_user_id TEXT NOT NULL,
+    accepted INTEGER DEFAULT 0,
     created_at TEXT NOT NULL,
     UNIQUE(owner_id, invited_user_id)
   )`);
+  await runIgnore('ALTER TABLE container_invites ADD COLUMN accepted INTEGER DEFAULT 0');
 }
 
 export async function closeDatabase(): Promise<void> {
@@ -88,9 +96,9 @@ export async function getSettings(): Promise<{ command_channel_id?: string; staf
 }
 
 export async function createContainer(rec: Omit<ContainerRecord, 'id'>): Promise<void> {
-  await run(`INSERT INTO containers (owner_id, owner_name, container_name, channel_group_id, terminal_channel_id, logs_channel_id, general_channel_id, voice_channel_id, status, visibility, inspection_active, suspended_reason, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [rec.owner_id, rec.owner_name, rec.container_name, rec.channel_group_id, rec.terminal_channel_id, rec.logs_channel_id, rec.general_channel_id, rec.voice_channel_id, rec.status, rec.visibility, rec.inspection_active, rec.suspended_reason, rec.created_at, rec.updated_at]);
+  await run(`INSERT INTO containers (owner_id, owner_name, container_name, container_role_id, channel_group_id, terminal_channel_id, logs_channel_id, general_channel_id, voice_channel_id, status, visibility, inspection_active, suspended_reason, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [rec.owner_id, rec.owner_name, rec.container_name, rec.container_role_id, rec.channel_group_id, rec.terminal_channel_id, rec.logs_channel_id, rec.general_channel_id, rec.voice_channel_id, rec.status, rec.visibility, rec.inspection_active, rec.suspended_reason, rec.created_at, rec.updated_at]);
 }
 
 export async function getContainer(ownerId: string): Promise<ContainerRecord | undefined> {
@@ -133,15 +141,29 @@ export async function removeChannel(channelId: string): Promise<void> {
 }
 
 export async function addInvite(ownerId: string, invitedUserId: string): Promise<void> {
-  await run('INSERT OR IGNORE INTO container_invites (owner_id, invited_user_id, created_at) VALUES (?, ?, ?)', [ownerId, invitedUserId, nowIso()]);
+  await run('INSERT OR IGNORE INTO container_invites (owner_id, invited_user_id, accepted, created_at) VALUES (?, ?, 0, ?)', [ownerId, invitedUserId, nowIso()]);
+}
+
+export async function acceptInvite(ownerId: string, invitedUserId: string): Promise<void> {
+  await run('UPDATE container_invites SET accepted=1 WHERE owner_id=? AND invited_user_id=?', [ownerId, invitedUserId]);
 }
 
 export async function removeInvite(ownerId: string, invitedUserId: string): Promise<void> {
   await run('DELETE FROM container_invites WHERE owner_id=? AND invited_user_id=?', [ownerId, invitedUserId]);
 }
 
+export async function hasInvite(ownerId: string, invitedUserId: string): Promise<boolean> {
+  const row = await get<{ total: number }>('SELECT COUNT(*) as total FROM container_invites WHERE owner_id=? AND invited_user_id=?', [ownerId, invitedUserId]);
+  return (row?.total ?? 0) > 0;
+}
+
 export async function listInvites(ownerId: string): Promise<string[]> {
   const rows = await all<{ invited_user_id: string }>('SELECT invited_user_id FROM container_invites WHERE owner_id=? ORDER BY created_at ASC', [ownerId]);
+  return rows.map((r) => r.invited_user_id);
+}
+
+export async function listAcceptedInvites(ownerId: string): Promise<string[]> {
+  const rows = await all<{ invited_user_id: string }>('SELECT invited_user_id FROM container_invites WHERE owner_id=? AND accepted=1 ORDER BY created_at ASC', [ownerId]);
   return rows.map((r) => r.invited_user_id);
 }
 

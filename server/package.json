@@ -1,7 +1,7 @@
 {
   "name": "dockerize-root-bot",
-  "version": "1.0.0",
-  "description": "Root port of Dockerize: container-like private channel groups controlled through text commands.",
+  "version": "1.1.0",
+  "description": "Root port of Dockerize with per-container role based access.",
   "main": "dist/main.js",
   "type": "commonjs",
   "scripts": {
@@ -16,7 +16,8 @@
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
+    "@rootsdk/dev-tools": "*",
     "@types/node": "^22.10.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.8.2"
   }
 }

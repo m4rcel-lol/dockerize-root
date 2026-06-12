@@ -25,6 +25,7 @@ export interface ContainerRecord {
   owner_id: string;
   owner_name: string;
   container_name: string;
+  container_role_id: string | null;
   channel_group_id: string | null;
   terminal_channel_id: string | null;
   logs_channel_id: string | null;

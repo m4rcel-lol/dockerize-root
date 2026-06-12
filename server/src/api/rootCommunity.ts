@@ -1,35 +1,102 @@
-import { rootServer, ChannelType } from '@rootsdk/server-bot';
+import { rootServer, ChannelType, WellKnownRootGuids } from '@rootsdk/server-bot';
 
 export type Overlay = Record<string, boolean | undefined>;
 
 export const allowBasic: Overlay = {
   channelView: true,
   channelCreateMessage: true,
-  channelCreateReaction: true,
-  channelConnect: true,
-  channelReadMessageHistory: true,
+  channelCreateMessageReaction: true,
+  channelViewMessageHistory: true,
+  channelVoiceTalk: true,
 };
 
 export const allowManager: Overlay = {
   ...allowBasic,
-  channelManage: true,
-  channelEdit: true,
-  channelDelete: true,
+  channelCreateMessageAttachment: true,
   channelCreateFile: true,
+  channelManageFiles: true,
+  channelViewFile: true,
 };
 
 export const denyBasic: Overlay = {
   channelView: false,
   channelCreateMessage: false,
-  channelConnect: false,
+  channelVoiceTalk: false,
 };
 
 export const publicOverlay: Overlay = {
   channelView: true,
   channelCreateMessage: true,
-  channelConnect: true,
-  channelReadMessageHistory: true,
+  channelViewMessageHistory: true,
+  channelVoiceTalk: true,
 };
+
+export function everyoneRoleId(): string {
+  return (WellKnownRootGuids as any).CommunityRoles.EveryoneRole;
+}
+
+function containerRoleRequest(name: string): any {
+  return {
+    name,
+    colorHex: '#0EA5E9',
+    isMentionable: false,
+    communityPermission: {
+      communityManageCommunity: false,
+      communityManageRoles: false,
+      communityManageEmojis: false,
+      communityManageAuditLog: false,
+      communityCreateInvite: false,
+      communityManageInvites: false,
+      communityCreateBan: false,
+      communityManageBans: false,
+      communityFullControl: false,
+      communityKick: false,
+      communityChangeMyNickname: false,
+      communityChangeOtherNickname: false,
+      communityCreateChannelGroup: false,
+      communityManageApps: false,
+    },
+    channelPermission: {
+      channelFullControl: false,
+      channelView: true,
+      channelUseExternalEmoji: false,
+      channelCreateMessage: true,
+      channelDeleteMessageOther: false,
+      channelManagePinnedMessages: false,
+      channelViewMessageHistory: true,
+      channelCreateMessageAttachment: false,
+      channelCreateMessageMention: false,
+      channelCreateMessageReaction: true,
+      channelMakeMessagePublic: false,
+      channelMoveUserOther: false,
+      channelVoiceTalk: true,
+      channelVoiceMuteOther: false,
+      channelVoiceDeafenOther: false,
+      channelVoiceKick: false,
+      channelVideoStreamMedia: false,
+      channelCreateFile: false,
+      channelManageFiles: false,
+      channelViewFile: false,
+      channelAppKick: false,
+    },
+  };
+}
+
+export async function createContainerRole(name: string): Promise<any> {
+  return await rootServer.community.communityRoles.create(containerRoleRequest(name) as any);
+}
+
+export async function deleteContainerRole(roleId: string): Promise<void> {
+  await rootServer.community.communityRoles.delete({ id: roleId } as any);
+}
+
+export async function addRoleToMember(userId: string, roleId: string): Promise<void> {
+  await rootServer.community.communityMemberRoles.add({ communityRoleId: roleId, userIds: [userId] } as any);
+}
+
+export async function removeRoleFromMember(userId: string, roleId: string): Promise<void> {
+  await rootServer.community.communityMemberRoles.remove({ communityRoleId: roleId, userIds: [userId] } as any);
+}
 
 export async function createChannelGroup(name: string, accessRuleCreates: Array<{ roleOrMemberId: string; overlay: Overlay }> = []): Promise<any> {
   return await rootServer.community.channelGroups.create({ name, accessRuleCreates } as any);
@@ -57,12 +124,13 @@ export async function deleteChannel(channelId: string): Promise<void> {
 }
 
 export async function addGroupRule(channelGroupId: string, roleOrMemberId: string, overlay: Overlay): Promise<void> {
-  await rootServer.community.accessRules.create({ channelGroupId, roleOrMemberId, overlay } as any);
+  await rootServer.community.accessRules.create({ channelOrChannelGroupId: channelGroupId, roleOrMemberId, overlay } as any);
 }
 
 export async function clearGroupRules(channelGroupId: string): Promise<void> {
   try {
-    const rules = await rootServer.community.accessRules.listByChannelOrChannelGroup({ channelGroupId } as any) as any[];
+    const res = await rootServer.community.accessRules.listByChannelOrChannelGroup({ channelOrChannelGroupId: channelGroupId } as any) as any;
+    const rules = Array.isArray(res) ? res : (res?.accessRules ?? res?.items ?? []);
     for (const rule of rules ?? []) {
       const accessRuleId = rule.accessRuleId ?? rule.id;
       if (accessRuleId) await rootServer.community.accessRules.delete({ accessRuleId } as any);
